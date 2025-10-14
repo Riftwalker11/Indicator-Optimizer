@@ -1,0 +1,936 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Custom Indicator Optimizer</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; padding: 20px; background: #f5f5f5; }
+        .container { max-width: 1400px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        h1 { color: #333; margin-bottom: 10px; }
+        h2 { color: #555; margin: 20px 0 10px 0; font-size: 20px; }
+        .step { background: #f9f9f9; border-left: 4px solid #2196F3; padding: 20px; margin: 20px 0; border-radius: 5px; }
+        .step-title { font-size: 18px; font-weight: bold; color: #2196F3; margin-bottom: 10px; }
+        .info-box { background: #e3f2fd; padding: 15px; border-radius: 5px; margin: 15px 0; font-size: 14px; }
+        .success-box { background: #c8e6c9; border: 2px solid #4CAF50; padding: 15px; border-radius: 5px; margin: 15px 0; }
+        .warning-box { background: #fff3cd; border: 2px solid #ffc107; padding: 15px; border-radius: 5px; margin: 15px 0; }
+        .upload-section { background: #f9f9f9; border: 2px dashed #ccc; padding: 30px; text-align: center; border-radius: 8px; margin: 20px 0; }
+        .upload-section.active { border-color: #4CAF50; background: #f0fff0; }
+        input[type="file"] { display: none; }
+        .btn { background: #2196F3; color: white; padding: 12px 30px; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; margin: 5px; }
+        .btn:hover { background: #1976D2; }
+        .btn-success { background: #4CAF50; }
+        .btn-success:hover { background: #45a049; }
+        .btn-danger { background: #f44336; }
+        .btn-danger:hover { background: #d32f2f; }
+        .btn-secondary { background: #757575; }
+        .btn-secondary:hover { background: #616161; }
+        textarea { width: 100%; min-height: 300px; font-family: 'Courier New', monospace; font-size: 13px; padding: 15px; border: 2px solid #ddd; border-radius: 5px; }
+        .code-editor { background: #1e1e1e; color: #d4d4d4; }
+        .param-table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        .param-table th, .param-table td { padding: 12px; border: 1px solid #ddd; text-align: left; }
+        .param-table th { background: #f5f5f5; font-weight: 600; }
+        .param-table input[type="number"] { width: 80px; padding: 5px; border: 1px solid #ccc; border-radius: 3px; }
+        .param-table input[type="checkbox"] { width: 20px; height: 20px; cursor: pointer; }
+        .param-name { font-family: monospace; font-weight: bold; color: #2196F3; }
+        .combinations-display { background: #e3f2fd; padding: 15px; border-radius: 5px; text-align: center; font-size: 18px; font-weight: bold; margin: 15px 0; }
+        .progress { width: 100%; height: 30px; background: #f0f0f0; border-radius: 15px; overflow: hidden; margin: 20px 0; }
+        .progress-bar { height: 100%; background: linear-gradient(90deg, #4CAF50, #8BC34A); transition: width 0.3s; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; }
+        .results { margin-top: 30px; }
+        .config-card { border: 2px solid #ddd; padding: 12px; margin: 8px 0; border-radius: 8px; font-size: 13px; }
+        .config-card.win90 { border-color: #FFD700; background: #fffbea; }
+        .config-card.win80 { border-color: #4CAF50; background: #f0fff0; }
+        .config-card.win70 { border-color: #8BC34A; background: #f9fbe7; }
+        .win-rate { font-size: 28px; font-weight: bold; }
+        .win-rate.elite { color: #FFD700; }
+        .win-rate.excellent { color: #4CAF50; }
+        .win-rate.good { color: #8BC34A; }
+        .hidden { display: none; }
+        .example-code { background: #f5f5f5; padding: 10px; border-radius: 5px; font-family: monospace; font-size: 12px; margin: 10px 0; white-space: pre-wrap; }
+        .helper-section { background: #fff9e6; border: 2px solid #ffc107; padding: 15px; border-radius: 5px; margin: 15px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔬 Custom Indicator Optimizer</h1>
+        <p style="color: #666; margin-bottom: 10px;">Upload your data, paste your indicator code, select parameters to optimize!</p>
+        
+        <!-- STEP 1: Upload CSV -->
+        <div class="step" id="step1">
+            <div class="step-title">Step 1: Upload Your Data (CSV)</div>
+            <div class="upload-section" id="uploadSection">
+                <p style="margin-bottom: 15px; font-size: 16px;">📁 Required columns: open, high, low, close, volume, timestamp</p>
+                <label for="fileInput" class="btn">Choose CSV File</label>
+                <input type="file" id="fileInput" accept=".csv">
+                <p id="fileName" style="margin-top: 10px; color: #666;"></p>
+            </div>
+        </div>
+
+        <!-- STEP 2: Indicator Code -->
+        <div class="step hidden" id="step2">
+            <div class="step-title">Step 2: Paste Your Indicator Code (JavaScript)</div>
+            
+            <div class="helper-section">
+                <strong>💡 Need to convert from PineScript or Python?</strong><br>
+                <button onclick="copyConversionPrompt()" class="btn btn-secondary" style="margin-top: 10px;">
+                    📋 Copy Conversion Prompt for Claude
+                </button>
+                <div id="conversionPrompt" class="example-code" style="display: none; margin-top: 10px;">
+Convert this trading indicator code to JavaScript following these exact requirements:
+
+1. Create a function called 'myIndicator' with signature:
+   function myIndicator(bars, params) { }
+
+2. Input format:
+   - bars: Array of {open, high, low, close, volume, timestamp}
+   - params: Object like {length: 14, atr_period: 20, threshold: 0.5}
+
+3. Output format - return array of signals:
+   [{index: 123, type: 'LONG', price: 50.25}, {index: 150, type: 'SHORT', price: 52.10}]
+
+4. Available helper functions (already provided):
+   - TA.sma(bars, field, period) - Simple Moving Average
+   - TA.ema(bars, field, period) - Exponential Moving Average
+   - TA.rsi(bars, field, period) - Relative Strength Index
+   - TA.atr(bars, period) - Average True Range
+   - TA.highest(bars, field, period) - Highest value
+   - TA.lowest(bars, field, period) - Lowest value
+
+5. Mark parameters with comments like:
+   // @param length: 14, min: 5, max: 50, step: 1
+   // @param threshold: 0.5, min: 0.1, max: 2.0, step: 0.1
+
+MY CODE TO CONVERT:
+[PASTE YOUR PINESCRIPT/PYTHON CODE HERE]</div>
+            </div>
+
+            <div class="info-box">
+                <strong>📝 Code Requirements:</strong><br>
+                • Function name: <code>myIndicator(bars, params)</code><br>
+                • Return array of signals: <code>[{index: i, type: 'LONG'|'SHORT', price: value}]</code><br>
+                • Mark parameters with: <code>// @param name: default, min: x, max: y, step: z</code><br>
+                • Use TA helper functions: <code>TA.sma(), TA.ema(), TA.rsi(), TA.atr()</code>
+            </div>
+
+            <textarea id="codeInput" placeholder="Paste your indicator JavaScript code here...
+
+Example:
+function myIndicator(bars, params) {
+  // @param fast_length: 12, min: 5, max: 50, step: 1
+  // @param slow_length: 26, min: 10, max: 100, step: 1
+  // @param signal_length: 9, min: 5, max: 30, step: 1
+  
+  const fast = params.fast_length || 12;
+  const slow = params.slow_length || 26;
+  const signal = params.signal_length || 9;
+  
+  const fastEMA = TA.ema(bars, 'close', fast);
+  const slowEMA = TA.ema(bars, 'close', slow);
+  
+  const signals = [];
+  for (let i = 1; i < bars.length; i++) {
+    if (!fastEMA[i] || !slowEMA[i]) continue;
+    
+    const macd = fastEMA[i] - slowEMA[i];
+    const prevMacd = fastEMA[i-1] - slowEMA[i-1];
+    
+    if (macd > 0 && prevMacd <= 0) {
+      signals.push({index: i, type: 'LONG', price: bars[i].close});
+    } else if (macd < 0 && prevMacd >= 0) {
+      signals.push({index: i, type: 'SHORT', price: bars[i].close});
+    }
+  }
+  return signals;
+}"></textarea>
+
+            <div style="margin-top: 15px;">
+                <button onclick="parseIndicatorCode()" class="btn btn-success">
+                    ✓ Parse Code & Detect Parameters
+                </button>
+                <button onclick="showExamples()" class="btn btn-secondary">
+                    📚 Show Example Indicators
+                </button>
+            </div>
+
+            <div id="examplesSection" class="hidden" style="margin-top: 20px;">
+                <h3>Example Indicators:</h3>
+                <button onclick="loadExample('macd')" class="btn btn-secondary">MACD Crossover</button>
+                <button onclick="loadExample('rsi')" class="btn btn-secondary">RSI Overbought/Oversold</button>
+                <button onclick="loadExample('ma_cross')" class="btn btn-secondary">MA Crossover</button>
+            </div>
+        </div>
+
+        <!-- STEP 3: Parameter Selection -->
+        <div class="step hidden" id="step3">
+            <div class="step-title">Step 3: Select Parameters to Optimize</div>
+            
+            <div class="success-box" id="detectionSuccess"></div>
+            
+            <div class="warning-box" style="margin: 20px 0;">
+                <strong>🎯 Win Threshold Settings</strong><br>
+                <div style="display: flex; gap: 20px; align-items: center; margin-top: 10px;">
+                    <label style="display: flex; align-items: center; gap: 10px;">
+                        <span>A signal is a WIN if price moves:</span>
+                        <input type="number" id="winThreshold" value="0.15" step="0.05" min="0.05" max="5.0" 
+                               style="width: 80px; padding: 8px; border: 2px solid #ffc107; border-radius: 4px; font-size: 16px; font-weight: bold;">
+                        <span>% or more</span>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 10px;">
+                        <span>Look ahead bars:</span>
+                        <input type="number" id="lookAheadBars" value="20" step="1" min="5" max="100" 
+                               style="width: 70px; padding: 8px; border: 2px solid #ffc107; border-radius: 4px; font-size: 16px; font-weight: bold;">
+                    </label>
+                </div>
+                <div style="margin-top: 10px; font-size: 13px; color: #666;">
+                    💡 Examples: 0.15% = scalping, 0.5% = day trading, 1.0%+ = swing trading<br>
+                    Look ahead: Maximum bars to search for best/worst price move after signal
+                </div>
+            </div>
+            
+            <table class="param-table" id="paramTable">
+                <thead>
+                    <tr>
+                        <th>Optimize?</th>
+                        <th>Parameter Name</th>
+                        <th>Default</th>
+                        <th>Min</th>
+                        <th>Max</th>
+                        <th>Step</th>
+                        <th>Values</th>
+                    </tr>
+                </thead>
+                <tbody id="paramTableBody">
+                </tbody>
+            </table>
+
+            <div class="combinations-display" id="combinationsDisplay">
+                Total Combinations: 0
+            </div>
+
+            <div style="text-align: center; margin-top: 20px;">
+                <button onclick="startOptimization()" class="btn btn-success" style="font-size: 18px; padding: 15px 40px;">
+                    🚀 Start Optimization
+                </button>
+            </div>
+        </div>
+
+        <!-- STEP 4: Progress -->
+        <div id="loading" class="hidden">
+            <div style="text-align: center; padding: 20px;">
+                <div style="font-size: 24px; font-weight: bold; margin-bottom: 10px;">
+                    Testing Configuration <span id="currentConfig">0</span> of <span id="totalConfigs">0</span>
+                </div>
+            </div>
+            <div class="progress">
+                <div class="progress-bar" id="progressBar" style="width: 0%">
+                    <span id="progressText">0%</span>
+                </div>
+            </div>
+            <p style="text-align: center; color: #666; margin-top: 15px; font-size: 16px; background: #f9f9f9; padding: 15px; border-radius: 8px;">
+                <strong>📊 Live Statistics:</strong><br>
+                <span style="font-size: 18px;">
+                Tested: <strong id="testedCount">0</strong> | 
+                Saved: <strong id="savedCount" style="color: #2196F3;">0</strong><br>
+                🏆 90%+: <strong id="win90Count" style="color: #FFD700; font-size: 22px;">0</strong> | 
+                🥇 80%+: <strong id="win80Count" style="color: #4CAF50; font-size: 20px;">0</strong> | 
+                ✅ 70%+: <strong id="win70Count" style="color: #8BC34A; font-size: 18px;">0</strong>
+                </span>
+            </p>
+            <div style="text-align: center; margin-top: 15px;">
+                <button id="stopBtn" class="btn btn-danger">🛑 STOP TEST & SHOW RESULTS</button>
+            </div>
+        </div>
+
+        <!-- STEP 5: Results -->
+        <div id="summary" class="hidden"></div>
+        <div id="results" class="results"></div>
+    </div>
+
+    <script>
+        // ==================== TECHNICAL ANALYSIS LIBRARY ====================
+        const TA = {
+            sma: function(bars, field, period) {
+                const result = new Array(bars.length).fill(null);
+                for (let i = period - 1; i < bars.length; i++) {
+                    let sum = 0;
+                    for (let j = 0; j < period; j++) {
+                        sum += bars[i - j][field];
+                    }
+                    result[i] = sum / period;
+                }
+                return result;
+            },
+
+            ema: function(bars, field, period) {
+                const result = new Array(bars.length).fill(null);
+                const multiplier = 2 / (period + 1);
+                
+                // Start with SMA
+                let sum = 0;
+                for (let i = 0; i < period; i++) {
+                    sum += bars[i][field];
+                }
+                result[period - 1] = sum / period;
+                
+                // Calculate EMA
+                for (let i = period; i < bars.length; i++) {
+                    result[i] = (bars[i][field] - result[i - 1]) * multiplier + result[i - 1];
+                }
+                return result;
+            },
+
+            rsi: function(bars, field, period) {
+                const result = new Array(bars.length).fill(null);
+                let gains = 0, losses = 0;
+                
+                // Initial average gain/loss
+                for (let i = 1; i <= period; i++) {
+                    const change = bars[i][field] - bars[i - 1][field];
+                    if (change > 0) gains += change;
+                    else losses += Math.abs(change);
+                }
+                
+                let avgGain = gains / period;
+                let avgLoss = losses / period;
+                
+                result[period] = 100 - (100 / (1 + avgGain / avgLoss));
+                
+                // Calculate RSI
+                for (let i = period + 1; i < bars.length; i++) {
+                    const change = bars[i][field] - bars[i - 1][field];
+                    const gain = change > 0 ? change : 0;
+                    const loss = change < 0 ? Math.abs(change) : 0;
+                    
+                    avgGain = (avgGain * (period - 1) + gain) / period;
+                    avgLoss = (avgLoss * (period - 1) + loss) / period;
+                    
+                    result[i] = 100 - (100 / (1 + avgGain / avgLoss));
+                }
+                return result;
+            },
+
+            atr: function(bars, period) {
+                const result = new Array(bars.length).fill(null);
+                const tr = [];
+                
+                for (let i = 1; i < bars.length; i++) {
+                    const high = bars[i].high;
+                    const low = bars[i].low;
+                    const prevClose = bars[i - 1].close;
+                    
+                    tr[i] = Math.max(
+                        high - low,
+                        Math.abs(high - prevClose),
+                        Math.abs(low - prevClose)
+                    );
+                }
+                
+                // Initial ATR (SMA of TR)
+                let sum = 0;
+                for (let i = 1; i <= period; i++) {
+                    sum += tr[i];
+                }
+                result[period] = sum / period;
+                
+                // Smoothed ATR
+                for (let i = period + 1; i < bars.length; i++) {
+                    result[i] = (result[i - 1] * (period - 1) + tr[i]) / period;
+                }
+                return result;
+            },
+
+            highest: function(bars, field, period) {
+                const result = new Array(bars.length).fill(null);
+                for (let i = period - 1; i < bars.length; i++) {
+                    let max = -Infinity;
+                    for (let j = 0; j < period; j++) {
+                        max = Math.max(max, bars[i - j][field]);
+                    }
+                    result[i] = max;
+                }
+                return result;
+            },
+
+            lowest: function(bars, field, period) {
+                const result = new Array(bars.length).fill(null);
+                for (let i = period - 1; i < bars.length; i++) {
+                    let min = Infinity;
+                    for (let j = 0; j < period; j++) {
+                        min = Math.min(min, bars[i - j][field]);
+                    }
+                    result[i] = min;
+                }
+                return result;
+            }
+        };
+
+        // ==================== GLOBAL VARIABLES ====================
+        let db;
+        let barsData = null;
+        let userIndicatorFunction = null;
+        let detectedParams = [];
+        let selectedParams = [];
+        let stopRequested = false;
+
+        // ==================== EXAMPLE INDICATORS ====================
+        const examples = {
+            macd: `function myIndicator(bars, params) {
+  // @param fast_length: 12, min: 5, max: 50, step: 1
+  // @param slow_length: 26, min: 10, max: 100, step: 1
+  
+  const fast = params.fast_length || 12;
+  const slow = params.slow_length || 26;
+  
+  const fastEMA = TA.ema(bars, 'close', fast);
+  const slowEMA = TA.ema(bars, 'close', slow);
+  
+  const signals = [];
+  for (let i = 1; i < bars.length; i++) {
+    if (!fastEMA[i] || !slowEMA[i]) continue;
+    
+    const macd = fastEMA[i] - slowEMA[i];
+    const prevMacd = fastEMA[i-1] - slowEMA[i-1];
+    
+    if (macd > 0 && prevMacd <= 0) {
+      signals.push({index: i, type: 'LONG', price: bars[i].close});
+    } else if (macd < 0 && prevMacd >= 0) {
+      signals.push({index: i, type: 'SHORT', price: bars[i].close});
+    }
+  }
+  return signals;
+}`,
+            rsi: `function myIndicator(bars, params) {
+  // @param rsi_period: 14, min: 7, max: 30, step: 1
+  // @param oversold: 30, min: 20, max: 40, step: 5
+  // @param overbought: 70, min: 60, max: 80, step: 5
+  
+  const period = params.rsi_period || 14;
+  const oversold = params.oversold || 30;
+  const overbought = params.overbought || 70;
+  
+  const rsi = TA.rsi(bars, 'close', period);
+  
+  const signals = [];
+  for (let i = 1; i < bars.length; i++) {
+    if (!rsi[i]) continue;
+    
+    if (rsi[i] > oversold && rsi[i-1] <= oversold) {
+      signals.push({index: i, type: 'LONG', price: bars[i].close});
+    } else if (rsi[i] < overbought && rsi[i-1] >= overbought) {
+      signals.push({index: i, type: 'SHORT', price: bars[i].close});
+    }
+  }
+  return signals;
+}`,
+            ma_cross: `function myIndicator(bars, params) {
+  // @param fast_ma: 10, min: 5, max: 50, step: 5
+  // @param slow_ma: 30, min: 20, max: 200, step: 10
+  
+  const fast = params.fast_ma || 10;
+  const slow = params.slow_ma || 30;
+  
+  const fastMA = TA.sma(bars, 'close', fast);
+  const slowMA = TA.sma(bars, 'close', slow);
+  
+  const signals = [];
+  for (let i = 1; i < bars.length; i++) {
+    if (!fastMA[i] || !slowMA[i]) continue;
+    
+    if (fastMA[i] > slowMA[i] && fastMA[i-1] <= slowMA[i-1]) {
+      signals.push({index: i, type: 'LONG', price: bars[i].close});
+    } else if (fastMA[i] < slowMA[i] && fastMA[i-1] >= slowMA[i-1]) {
+      signals.push({index: i, type: 'SHORT', price: bars[i].close});
+    }
+  }
+  return signals;
+}`
+        };
+
+        // ==================== DATABASE FUNCTIONS ====================
+        function initDB() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open('TradingOptimizer', 1);
+                request.onerror = () => reject(request.error);
+                request.onsuccess = () => {
+                    db = request.result;
+                    resolve(db);
+                };
+                request.onupgradeneeded = (event) => {
+                    db = event.target.result;
+                    if (!db.objectStoreNames.contains('results')) {
+                        const objectStore = db.createObjectStore('results', { keyPath: 'id', autoIncrement: true });
+                        objectStore.createIndex('winRate', 'winRate', { unique: false });
+                    }
+                };
+            });
+        }
+
+        function saveBatch(results) {
+            if (results.length === 0) return Promise.resolve();
+            return new Promise((resolve, reject) => {
+                const transaction = db.transaction(['results'], 'readwrite');
+                const objectStore = transaction.objectStore('results');
+                results.forEach(result => {
+                    if (result.winRate >= 70) {
+                        objectStore.add(result);
+                    }
+                });
+                transaction.oncomplete = () => resolve();
+                transaction.onerror = () => reject(transaction.error);
+            });
+        }
+
+        function clearDatabase() {
+            if (confirm('Clear all saved results?')) {
+                const transaction = db.transaction(['results'], 'readwrite');
+                transaction.objectStore('results').clear();
+                document.getElementById('results').innerHTML = '';
+                document.getElementById('summary').classList.add('hidden');
+            }
+        }
+
+        // ==================== STEP 1: CSV UPLOAD ====================
+        document.getElementById('fileInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            document.getElementById('fileName').textContent = 'Loading: ' + file.name;
+            
+            Papa.parse(file, {
+                header: true,
+                dynamicTyping: true,
+                skipEmptyLines: true,
+                complete: function(results) {
+                    barsData = results.data;
+                    document.getElementById('fileName').textContent = '✓ Loaded: ' + file.name + ' (' + barsData.length + ' bars)';
+                    document.getElementById('uploadSection').classList.add('active');
+                    document.getElementById('step2').classList.remove('hidden');
+                    alert('Data loaded! Now paste your indicator code in Step 2.');
+                },
+                error: function(error) {
+                    alert('Error loading CSV: ' + error.message);
+                }
+            });
+        });
+
+        // ==================== STEP 2: CODE INPUT ====================
+        function copyConversionPrompt() {
+            const prompt = document.getElementById('conversionPrompt');
+            prompt.style.display = 'block';
+            
+            navigator.clipboard.writeText(prompt.textContent).then(() => {
+                alert('✓ Conversion prompt copied! Paste it to Claude along with your code.');
+            });
+        }
+
+        function showExamples() {
+            const section = document.getElementById('examplesSection');
+            section.classList.toggle('hidden');
+        }
+
+        function loadExample(type) {
+            document.getElementById('codeInput').value = examples[type];
+            alert('Example loaded! Click "Parse Code & Detect Parameters" to continue.');
+        }
+
+        function parseIndicatorCode() {
+            const code = document.getElementById('codeInput').value.trim();
+            if (!code) {
+                alert('Please paste your indicator code first!');
+                return;
+            }
+
+            // Extract function
+            try {
+                eval(code);
+                if (typeof myIndicator !== 'function') {
+                    throw new Error('Function "myIndicator" not found');
+                }
+                userIndicatorFunction = myIndicator;
+            } catch (e) {
+                alert('Error in code: ' + e.message + '\n\nMake sure your function is named "myIndicator"');
+                return;
+            }
+
+            // Detect parameters (both methods)
+            detectedParams = [];
+            
+            // Method 1: Comment-based detection
+            const commentRegex = /\/\/\s*@param\s+(\w+):\s*([^,]+),\s*min:\s*([^,]+),\s*max:\s*([^,]+)(?:,\s*step:\s*([^\n]+))?/g;
+            let match;
+            while ((match = commentRegex.exec(code)) !== null) {
+                detectedParams.push({
+                    name: match[1],
+                    default: parseFloat(match[2]),
+                    min: parseFloat(match[3]),
+                    max: parseFloat(match[4]),
+                    step: match[5] ? parseFloat(match[5]) : 1,
+                    source: 'comment'
+                });
+            }
+
+            // Method 2: Smart detection (params.xxx)
+            const paramsRegex = /params\.(\w+)/g;
+            const foundParams = new Set();
+            while ((match = paramsRegex.exec(code)) !== null) {
+                foundParams.add(match[1]);
+            }
+
+            foundParams.forEach(paramName => {
+                if (!detectedParams.find(p => p.name === paramName)) {
+                    // Try to find default value
+                    const defaultRegex = new RegExp(`params\\.${paramName}\\s*\\|\\|\\s*([\\d.]+)`, 'g');
+                    const defaultMatch = defaultRegex.exec(code);
+                    const defaultValue = defaultMatch ? parseFloat(defaultMatch[1]) : 10;
+                    
+                    detectedParams.push({
+                        name: paramName,
+                        default: defaultValue,
+                        min: Math.max(1, Math.floor(defaultValue * 0.5)),
+                        max: Math.ceil(defaultValue * 2),
+                        step: defaultValue > 1 ? 1 : 0.1,
+                        source: 'auto'
+                    });
+                }
+            });
+
+            if (detectedParams.length === 0) {
+                alert('No parameters detected! Make sure to use:\n• @param comments, or\n• params.xxx in your code');
+                return;
+            }
+
+            // Show Step 3
+            document.getElementById('step3').classList.remove('hidden');
+            displayParameterTable();
+            
+            const msg = `✓ Detected ${detectedParams.length} parameters:\n${detectedParams.map(p => 
+                `• ${p.name} (${p.source === 'comment' ? 'from comment' : 'auto-detected'})`
+            ).join('\n')}`;
+            
+            document.getElementById('detectionSuccess').textContent = msg;
+            
+            // Scroll to step 3
+            document.getElementById('step3').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // ==================== STEP 3: PARAMETER SELECTION ====================
+        function displayParameterTable() {
+            const tbody = document.getElementById('paramTableBody');
+            tbody.innerHTML = '';
+
+            detectedParams.forEach((param, idx) => {
+                const row = document.createElement('tr');
+                const values = Math.floor((param.max - param.min) / param.step) + 1;
+                
+                row.innerHTML = `
+                    <td><input type="checkbox" id="param_${idx}" onchange="updateCombinations()" checked></td>
+                    <td><span class="param-name">${param.name}</span></td>
+                    <td>${param.default}</td>
+                    <td><input type="number" id="min_${idx}" value="${param.min}" step="${param.step}" onchange="updateCombinations()"></td>
+                    <td><input type="number" id="max_${idx}" value="${param.max}" step="${param.step}" onchange="updateCombinations()"></td>
+                    <td><input type="number" id="step_${idx}" value="${param.step}" step="0.1" min="0.1" onchange="updateCombinations()"></td>
+                    <td id="values_${idx}">${values}</td>
+                `;
+                tbody.appendChild(row);
+            });
+
+            updateCombinations();
+        }
+
+        function updateCombinations() {
+            let total = 1;
+            selectedParams = [];
+
+            detectedParams.forEach((param, idx) => {
+                const checked = document.getElementById(`param_${idx}`).checked;
+                const min = parseFloat(document.getElementById(`min_${idx}`).value);
+                const max = parseFloat(document.getElementById(`max_${idx}`).value);
+                const step = parseFloat(document.getElementById(`step_${idx}`).value);
+                
+                const values = Math.floor((max - min) / step) + 1;
+                document.getElementById(`values_${idx}`).textContent = values;
+
+                if (checked) {
+                    total *= values;
+                    selectedParams.push({ ...param, min, max, step, values });
+                }
+            });
+
+            document.getElementById('combinationsDisplay').textContent = 
+                `Total Combinations: ${total.toLocaleString()} | Estimated Time: ${estimateTime(total)}`;
+        }
+
+        function estimateTime(combinations) {
+            const testsPerSecond = 50;
+            const seconds = combinations / testsPerSecond;
+            
+            if (seconds < 60) return Math.ceil(seconds) + ' seconds';
+            if (seconds < 3600) return Math.ceil(seconds / 60) + ' minutes';
+            if (seconds < 86400) return (seconds / 3600).toFixed(1) + ' hours';
+            return (seconds / 86400).toFixed(1) + ' days';
+        }
+
+        // ==================== STEP 4: OPTIMIZATION ====================
+        async function startOptimization() {
+            if (!barsData) {
+                alert('Please upload CSV data first!');
+                return;
+            }
+
+            if (selectedParams.length === 0) {
+                alert('Please select at least one parameter to optimize!');
+                return;
+            }
+
+            await initDB();
+            
+            // Clear previous results
+            const transaction = db.transaction(['results'], 'readwrite');
+            transaction.objectStore('results').clear();
+
+            stopRequested = false;
+            document.getElementById('loading').classList.remove('hidden');
+            document.getElementById('step3').classList.add('hidden');
+            
+            setTimeout(() => runOptimization(), 100);
+        }
+
+        async function runOptimization() {
+            // Generate all parameter combinations
+            function* configGenerator() {
+                const ranges = selectedParams.map(p => {
+                    const values = [];
+                    for (let v = p.min; v <= p.max; v += p.step) {
+                        values.push(parseFloat(v.toFixed(10)));
+                    }
+                    return values;
+                });
+
+                function* generate(index, current) {
+                    if (index === ranges.length) {
+                        yield { ...current };
+                        return;
+                    }
+
+                    for (let value of ranges[index]) {
+                        current[selectedParams[index].name] = value;
+                        yield* generate(index + 1, current);
+                    }
+                }
+
+                yield* generate(0, {});
+            }
+
+            // Test function
+            function testConfig(params) {
+                try {
+                    const signals = userIndicatorFunction(barsData, params);
+                    
+                    if (!signals || signals.length === 0 || signals.length < 8 || signals.length > 150) {
+                        return null;
+                    }
+
+                    // Get user-defined thresholds
+                    const winThreshold = parseFloat(document.getElementById('winThreshold').value);
+                    const lookAheadBars = parseInt(document.getElementById('lookAheadBars').value);
+
+                    // Evaluate signals
+                    const evaluated = signals.map((s, sIdx) => {
+                        let best = 0, worst = 0;
+                        let nextReversalIdx = barsData.length;
+                        
+                        for (let k = sIdx + 1; k < signals.length; k++) {
+                            if (signals[k].type !== s.type) {
+                                nextReversalIdx = signals[k].idx || signals[k].index;
+                                break;
+                            }
+                        }
+                        
+                        const startIdx = s.idx || s.index;
+                        const endIdx = Math.min(nextReversalIdx, startIdx + lookAheadBars);
+                        
+                        for (let j = 1; j < endIdx - startIdx && startIdx + j < barsData.length; j++) {
+                            const bar = barsData[startIdx + j];
+                            if (s.type === 'LONG') {
+                                best = Math.max(best, ((bar.high - s.price) / s.price) * 100);
+                                worst = Math.min(worst, ((bar.low - s.price) / s.price) * 100);
+                            } else {
+                                best = Math.max(best, ((s.price - bar.low) / s.price) * 100);
+                                worst = Math.min(worst, ((s.price - bar.high) / s.price) * 100);
+                            }
+                        }
+                        return { best, worst, win: best >= winThreshold };
+                    });
+
+                    const wins = evaluated.filter(s => s.win).length;
+                    const avgBest = evaluated.reduce((a, b) => a + b.best, 0) / evaluated.length;
+                    const avgWorst = evaluated.reduce((a, b) => a + b.worst, 0) / evaluated.length;
+
+                    return {
+                        params: params,
+                        total: evaluated.length,
+                        wins: wins,
+                        winRate: parseFloat((wins / evaluated.length * 100).toFixed(1)),
+                        avgBest: parseFloat(avgBest.toFixed(2)),
+                        avgWorst: parseFloat(avgWorst.toFixed(2)),
+                        profitFactor: parseFloat((avgBest / Math.abs(avgWorst)).toFixed(2))
+                    };
+                } catch (e) {
+                    console.error('Error testing config:', e);
+                    return null;
+                }
+            }
+
+            // Calculate total
+            let totalConfigs = 1;
+            selectedParams.forEach(p => totalConfigs *= p.values);
+            document.getElementById('totalConfigs').textContent = totalConfigs;
+
+            let tested = 0, saved = 0, win70 = 0, win80 = 0, win90 = 0;
+            const startTime = Date.now();
+            let pendingSaves = [];
+            const generator = configGenerator();
+
+            async function processBatch() {
+                if (stopRequested) {
+                    if (pendingSaves.length > 0) await saveBatch(pendingSaves);
+                    return true;
+                }
+
+                for (let i = 0; i < 100; i++) {
+                    const next = generator.next();
+                    if (next.done) {
+                        if (pendingSaves.length > 0) await saveBatch(pendingSaves);
+                        return true;
+                    }
+
+                    tested++;
+                    const result = testConfig(next.value);
+
+                    if (result && result.winRate >= 70) {
+                        pendingSaves.push(result);
+                        saved++;
+                        win70++;
+                        if (result.winRate >= 80) {
+                            win80++;
+                            if (result.winRate >= 90) win90++;
+                        }
+                    }
+
+                    if (pendingSaves.length >= 500) {
+                        await saveBatch(pendingSaves);
+                        pendingSaves = [];
+                    }
+                }
+
+                if (tested % 1000 === 0) {
+                    const percent = Math.round((tested / totalConfigs) * 100);
+                    document.getElementById('progressBar').style.width = percent + '%';
+                    document.getElementById('progressText').textContent = percent + '%';
+                    document.getElementById('currentConfig').textContent = tested;
+                    document.getElementById('testedCount').textContent = tested;
+                    document.getElementById('savedCount').textContent = saved;
+                    document.getElementById('win70Count').textContent = win70;
+                    document.getElementById('win80Count').textContent = win80;
+                    document.getElementById('win90Count').textContent = win90;
+                }
+
+                await new Promise(resolve => setTimeout(resolve, 1));
+                return processBatch();
+            }
+
+            await processBatch();
+
+            // Show results
+            document.getElementById('loading').classList.add('hidden');
+            await showResults(tested, totalConfigs);
+        }
+
+        document.getElementById('stopBtn').addEventListener('click', function() {
+            if (confirm('Stop and show results?')) {
+                stopRequested = true;
+                this.disabled = true;
+                this.textContent = '⏸️ Stopping...';
+            }
+        });
+
+        // ==================== STEP 5: RESULTS ====================
+        async function showResults(tested, total) {
+            const transaction = db.transaction(['results'], 'readonly');
+            const objectStore = transaction.objectStore('results');
+            const request = objectStore.getAll();
+
+            request.onsuccess = () => {
+                const results = request.result.sort((a, b) => b.winRate - a.winRate);
+                
+                let html = '<h2 style="color: #4CAF50; margin: 20px 0;">✅ Optimization Complete!</h2>';
+                html += `<div class="info-box">
+                    <strong>Settings Used:</strong> Win Threshold = ${document.getElementById('winThreshold').value}%, Look Ahead = ${document.getElementById('lookAheadBars').value} bars<br>
+                    Tested ${tested.toLocaleString()} of ${total.toLocaleString()} configurations. Found ${results.length} with 70%+ win rate.
+                </div>`;
+                
+                if (results.length === 0) {
+                    html += '<div class="warning-box">No configurations met the 70%+ win rate threshold. Try adjusting your indicator logic or parameter ranges.</div>';
+                } else {
+                    html += '<h3>Top Results:</h3>';
+                    results.slice(0, 20).forEach((r, idx) => {
+                        const is90 = r.winRate >= 90;
+                        const is80 = r.winRate >= 80;
+                        
+                        html += `<div class="config-card ${is90 ? 'win90' : is80 ? 'win80' : 'win70'}">`;
+                        html += '<div style="display: flex; justify-content: space-between;">';
+                        html += `<div style="flex: 1;">`;
+                        html += `<strong>#${idx + 1} ${is90 ? '🏆' : is80 ? '🥇' : '✅'}</strong><br>`;
+                        html += `Parameters: ${JSON.stringify(r.params)}<br>`;
+                        html += `Signals: ${r.total} | Wins: ${r.wins} | Avg Best: +${r.avgBest}% | Avg Worst: ${r.avgWorst}% | PF: ${r.profitFactor}`;
+                        html += '</div>';
+                        html += `<div class="win-rate ${is90 ? 'elite' : is80 ? 'excellent' : 'good'}">${r.winRate}%</div>`;
+                        html += '</div></div>';
+                    });
+
+                    if (results.length > 20) {
+                        html += `<p style="text-align: center; margin: 20px 0;">...and ${results.length - 20} more results</p>`;
+                    }
+
+                    html += '<div style="text-align: center; margin: 20px 0;">';
+                    html += '<button onclick="downloadResults()" class="btn btn-success">📥 Download All Results (CSV)</button>';
+                    html += '<button onclick="clearDatabase()" class="btn btn-danger">🗑️ Clear Results</button>';
+                    html += '</div>';
+                }
+
+                document.getElementById('summary').innerHTML = html;
+                document.getElementById('summary').classList.remove('hidden');
+            };
+        }
+
+        async function downloadResults() {
+            const transaction = db.transaction(['results'], 'readonly');
+            const objectStore = transaction.objectStore('results');
+            const request = objectStore.getAll();
+
+            request.onsuccess = () => {
+                const results = request.result.sort((a, b) => b.winRate - a.winRate);
+                
+                let csv = 'Rank,WinRate,Signals,Wins,AvgBest,AvgWorst,ProfitFactor';
+                selectedParams.forEach(p => csv += ',' + p.name);
+                csv += '\n';
+
+                results.forEach((r, idx) => {
+                    csv += `${idx + 1},${r.winRate},${r.total},${r.wins},${r.avgBest},${r.avgWorst},${r.profitFactor}`;
+                    selectedParams.forEach(p => csv += ',' + r.params[p.name]);
+                    csv += '\n';
+                });
+
+                const blob = new Blob([csv], { type: 'text/csv' });
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'optimizer_results.csv';
+                a.click();
+            };
+        }
+    </script>
+</body>
+</html>
